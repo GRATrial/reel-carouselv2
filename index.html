@@ -604,7 +604,26 @@
                         }
                     }
                     
-                    // CTA tracking now handled by ga-carousel.js
+                    // Track CTA click using MongoDB
+                    if (window.MongoTracker && window.MongoTracker.track) {
+                        window.MongoTracker.track('cta_click', {
+                            cta_type: interactionType,
+                            action: interactionType,
+                            post_type: 'reel_carousel',
+                            post_id: `reel_carousel_${reelNumber}`,
+                            condition: 'reel_carousel'
+                        });
+                    }
+                    
+                    // Also log via logEvent for compatibility
+                    if (window.MongoTracker && window.MongoTracker.logEvent) {
+                        window.MongoTracker.logEvent('cta_click', {
+                            buttonId: interactionType,
+                            cta_type: interactionType,
+                            post_type: 'reel_carousel',
+                            post_id: `reel_carousel_${reelNumber}`
+                        });
+                    }
                 });
             });
 
