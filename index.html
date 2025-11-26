@@ -55,6 +55,7 @@
         }
         
         html, body {
+            height: 100%;
             width: 100%;
             overflow-x: hidden;
             overflow-y: auto;
@@ -66,7 +67,8 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #fafafa;
             color: #262626;
-            min-height: 100vh;
+            height: 100%;
+            width: 100%;
             display: flex;
             justify-content: center;
             align-items: flex-start;
@@ -75,24 +77,9 @@
         .mobile-container {
             width: 100%;
             max-width: 450px;
-            min-height: 100vh;
+            height: 100%;
             background: #fff;
             position: relative;
-        }
-        
-        .back-button {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            color: #262626;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 20px;
-            cursor: pointer;
-            z-index: 1000;
-            font-size: 12px;
-            text-decoration: none;
         }
         
         
@@ -118,8 +105,8 @@
         
         .reels-container {
             width: 100%;
-            height: calc(100vh - 60px);
-            overflow-y: scroll;
+            height: 100%;
+            overflow-y: auto;
             scroll-snap-type: y mandatory;
             scroll-behavior: smooth;
             scrollbar-width: none;
@@ -419,7 +406,6 @@
 </head>
 <body>
     <div class="mobile-container">
-        <!-- <a href="../index.html" class="back-button">← Back</a> -->
         
         <!-- Tap to Start Overlay -->
         <div class="tap-to-start-overlay" id="tap-to-start-overlay">

@@ -23,10 +23,14 @@
         carousel: null,
         currentSlideIndex: 0,
         slideStartTime: null,
-        slideDwellTimes: {},
+        slideDwellTimes: {}, // Time spent on each slide (0-indexed: 0, 1, 2, 3)
         totalSwipes: 0,
+        forwardSwipes: 0,
+        backwardSwipes: 0,
         uniqueSlidesViewed: new Set(),
-        isTracking: false
+        imagesViewed: [], // Array of image indices viewed (1-indexed: 1, 2, 3, 4)
+        isTracking: false,
+        previousSlideIndex: -1 // Track previous slide to determine swipe direction
     };
     
     /**
@@ -113,25 +117,70 @@
         reelState.totalSwipes++;
         reelState.uniqueSlidesViewed.add(toSlide);
         
+        // Determine swipe direction (forward = next image, backward = previous image)
+        if (toSlide > fromSlide) {
+            reelState.forwardSwipes++;
+        } else if (toSlide < fromSlide) {
+            reelState.backwardSwipes++;
+        }
+        
+        // Track which images were viewed (1-indexed: 1, 2, 3, 4)
+        const imageNumber = toSlide + 1; // Convert 0-indexed to 1-indexed
+        if (!reelState.imagesViewed.includes(imageNumber)) {
+            reelState.imagesViewed.push(imageNumber);
+        }
+        
         window.MongoTracker.track('reel_carousel_swipe', {
             from_slide: fromSlide,
             to_slide: toSlide,
             total_swipes: reelState.totalSwipes,
+            forward_swipes: reelState.forwardSwipes,
+            backward_swipes: reelState.backwardSwipes,
             unique_slides_viewed: reelState.uniqueSlidesViewed.size,
+            images_viewed: [...reelState.imagesViewed].sort((a, b) => a - b),
             condition: 'reel_carousel'
         });
     }
     
     /**
-     * Track final summary
+     * Track final summary with top 10 carousel metrics
      */
     function trackSummary() {
         const totalTime = Object.values(reelState.slideDwellTimes).reduce((sum, time) => sum + time, 0);
         
+        // Calculate top 10 metrics
+        const totalSlides = reelState.slides.length; // Should be 4
+        const viewedAllImages = reelState.uniqueSlidesViewed.size === totalSlides ? 'yes' : 'no';
+        const imagesViewed = [...reelState.imagesViewed].sort((a, b) => a - b); // 1-indexed: [1, 2, 3, 4]
+        const uniqueImagesCount = reelState.uniqueSlidesViewed.size;
+        const totalSwipes = reelState.totalSwipes;
+        
+        // Time on each image (1-indexed: image 1, 2, 3, 4)
+        // Convert from 0-indexed slideDwellTimes to 1-indexed time_on_image
+        const timeOnImage1 = Math.round((reelState.slideDwellTimes[0] || 0) / 1000 * 100) / 100; // seconds
+        const timeOnImage2 = Math.round((reelState.slideDwellTimes[1] || 0) / 1000 * 100) / 100; // seconds
+        const timeOnImage3 = Math.round((reelState.slideDwellTimes[2] || 0) / 1000 * 100) / 100; // seconds
+        const timeOnImage4 = Math.round((reelState.slideDwellTimes[3] || 0) / 1000 * 100) / 100; // seconds
+        
+        const forwardSwipes = reelState.forwardSwipes;
+        const backwardSwipes = reelState.backwardSwipes;
+        
         window.MongoTracker.track('reel_carousel_summary', {
-            total_slides: reelState.slides.length,
-            slides_viewed: reelState.uniqueSlidesViewed.size,
-            total_swipes: reelState.totalSwipes,
+            // Top 10 Carousel Metrics
+            viewed_all_images: viewedAllImages,
+            images_viewed: imagesViewed,
+            unique_images_count: uniqueImagesCount,
+            total_swipes: totalSwipes,
+            time_on_image_1: timeOnImage1,
+            time_on_image_2: timeOnImage2,
+            time_on_image_3: timeOnImage3,
+            time_on_image_4: timeOnImage4,
+            forward_swipes: forwardSwipes,
+            backward_swipes: backwardSwipes,
+            
+            // Additional legacy metrics
+            total_slides: totalSlides,
+            slides_viewed: uniqueImagesCount,
             slide_dwell_times: reelState.slideDwellTimes,
             total_time_seconds: Math.round((totalTime / 1000) * 100) / 100,
             condition: 'reel_carousel'
@@ -157,6 +206,15 @@
             trackSlideSwipe(reelState.currentSlideIndex, newSlideIndex);
         }
         
+        // Track initial view of first slide
+        if (reelState.currentSlideIndex === -1 || reelState.currentSlideIndex === 0) {
+            const imageNumber = newSlideIndex + 1; // Convert 0-indexed to 1-indexed
+            if (!reelState.imagesViewed.includes(imageNumber)) {
+                reelState.imagesViewed.push(imageNumber);
+            }
+        }
+        
+        reelState.previousSlideIndex = reelState.currentSlideIndex;
         reelState.currentSlideIndex = newSlideIndex;
         reelState.slideStartTime = now;
         reelState.uniqueSlidesViewed.add(newSlideIndex);
@@ -242,6 +300,12 @@
         reelState.slideStartTime = Date.now();
         reelState.isTracking = true;
         reelState.uniqueSlidesViewed.add(reelState.currentSlideIndex);
+        
+        // Track initial view of first slide (1-indexed)
+        const initialImageNumber = reelState.currentSlideIndex + 1;
+        if (!reelState.imagesViewed.includes(initialImageNumber)) {
+            reelState.imagesViewed.push(initialImageNumber);
+        }
         
         console.log('MongoReelCarouselTracker: Started tracking', reelState.slides.length, 'slides');
         console.log('MongoReelCarouselTracker: Initial slide index:', reelState.currentSlideIndex);

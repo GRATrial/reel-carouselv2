@@ -36,3 +36,4 @@ This repository contains a standalone HTML page for displaying NYU carousel ads 
 - **Content Type**: Carousel advertisement
 - **Target**: NYU Stern MBA program
 - **GA4 Property**: `G-Y148JRHLC9`
+# reel-carouselv2
