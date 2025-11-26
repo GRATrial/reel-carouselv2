@@ -5,6 +5,7 @@
 
 const { MongoClient } = require('mongodb');
 
+// Use environment variable or fallback to hardcoded URI (for development/testing)
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://estatedeliuser:estatedeli12345@cluster0.xwvmm93.mongodb.net/instagram_study?retryWrites=true&w=majority';
 const DB_NAME = 'instagram_study';
 
