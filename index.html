@@ -587,20 +587,76 @@
             });
             
             // CTA click tracking
-            document.querySelectorAll('.reel-action').forEach(button => {
+            document.querySelectorAll('.reel-action').forEach((button, index) => {
                 button.addEventListener('click', (e) => {
                     const reelNumber = parseInt(button.closest('.reel').dataset.reel);
                     
                     let interactionType = 'unknown';
                     const icon = button.querySelector('svg');
+                    const actionCount = button.querySelector('.reel-action-count');
+                    const countText = actionCount ? actionCount.textContent.trim().toLowerCase() : '';
+                    
                     if (icon) {
-                        const path = icon.querySelector('path');
-                        if (path) {
-                            const d = path.getAttribute('d');
-                            if (d.includes('M20.84 4.61')) interactionType = 'like';
-                            else if (d.includes('M21 15a2')) interactionType = 'comment';
-                            else if (d.includes('M22 2L11 13')) interactionType = 'share';
-                            else if (d.includes('circle cx="12"')) interactionType = 'more';
+                        // Method 1: Check for more button (three dots) - uses circles, not path
+                        const circles = icon.querySelectorAll('circle');
+                        if (circles.length >= 3) {
+                            // Check if it's the three dots pattern (vertical alignment)
+                            const cyValues = Array.from(circles).map(c => c.getAttribute('cy'));
+                            // More flexible check - just need 3 circles with different cy values
+                            const uniqueCyValues = [...new Set(cyValues)];
+                            if (uniqueCyValues.length >= 3) {
+                                interactionType = 'more';
+                            }
+                        }
+                        
+                        // Method 2: Check for other buttons using path patterns
+                        if (interactionType === 'unknown') {
+                            const path = icon.querySelector('path');
+                            if (path) {
+                                const d = path.getAttribute('d') || '';
+                                // Like button - heart shape
+                                if (d.includes('M20.84 4.61') || d.includes('4.61a5.5') || d.includes('7.78 0L12')) {
+                                    interactionType = 'like';
+                                }
+                                // Comment button - speech bubble
+                                else if (d.includes('M21 15a2') || d.includes('15a2 2 0') || d.includes('H7l-4 4V5')) {
+                                    interactionType = 'comment';
+                                }
+                                // Share button - arrow/send
+                                else if (d.includes('M22 2L11 13') || d.includes('2L11 13M22') || d.includes('20-7z')) {
+                                    interactionType = 'share';
+                                }
+                            }
+                        }
+                        
+                        // Method 3: Fallback - use button position or text content
+                        if (interactionType === 'unknown') {
+                            // Check action count text for hints
+                            if (countText === 'more' || countText.includes('more')) {
+                                interactionType = 'more';
+                            } else if (countText === 'share' || countText.includes('share')) {
+                                interactionType = 'share';
+                            } else {
+                                // Use button index as fallback (order: like, comment, share, more)
+                                const buttonTypes = ['like', 'comment', 'share', 'more'];
+                                if (index < buttonTypes.length) {
+                                    interactionType = buttonTypes[index];
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Get current slide index from carousel track
+                    let currentSlideIndex = 0;
+                    const reel = button.closest('.reel');
+                    if (reel) {
+                        const track = reel.querySelector('.reel-carousel-track');
+                        if (track) {
+                            const transform = track.style.transform || window.getComputedStyle(track).transform;
+                            const match = transform.match(/translateX\(-(\d+)%\)/);
+                            if (match) {
+                                currentSlideIndex = parseInt(match[1]) / 100;
+                            }
                         }
                     }
                     
@@ -611,7 +667,8 @@
                             action: interactionType,
                             post_type: 'reel_carousel',
                             post_id: `reel_carousel_${reelNumber}`,
-                            condition: 'reel_carousel'
+                            condition: 'reel_carousel',
+                            slide_index: currentSlideIndex
                         });
                     }
                     
